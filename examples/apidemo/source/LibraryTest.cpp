@@ -2,7 +2,7 @@
 //
 
 #include <stdio.h>
-#include "../CASIOClient/CASIOClient.h"
+#include "../../../source/CASIOClient.h"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -37,8 +37,8 @@ int CDECL asioCallback(CASIO_Event *event, CASIO_Device device, void *userData)
             auto outs = (int **)event->bufferSwitchEvent.outputs;
 
             for (int j = 0; j < asioDevice->props.bufferSampleLength; j++) {
-                float fsample = sin(asioDevice->samplePos * M_PI * 2.0 / asioDevice->samplePeriod);
-                int isample = (fsample * (1 << 30));
+                float fsample = (float) sin(asioDevice->samplePos * M_PI * 2.0 / asioDevice->samplePeriod);
+                int isample = (int) (fsample * (1 << 30));
                 for (int i = 0; i < asioDevice->props.numOutputs; i++) {
                     outs[i][j] = isample;
                 }

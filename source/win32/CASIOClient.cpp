@@ -2,9 +2,9 @@
 //
 
 #include "header.h"
-#include "CASIOClient.h"
+#include "../CASIOClient.h"
 
-#include "utils.h"
+#include "unicodestuff.h"
 
 #include <objbase.h> // COM stuff
 #include <stdio.h>
@@ -13,7 +13,7 @@
 
 #include <assert.h>
 
-#include "../ASIOSDK2.3/common/iasiodrv.h"
+#include "../../deps/ASIOSDK2.3/common/iasiodrv.h"
 
 //============ globals =======================================================
 
