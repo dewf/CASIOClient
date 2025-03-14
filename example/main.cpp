@@ -1,13 +1,14 @@
-// LibraryTest.cpp : Defines the entry point for the console application.
-//
+#include <cstdio>
+#include "../library/source/CASIOClient.h"
 
-#include <stdio.h>
-#include "../../../source/CASIOClient.h"
+#include <cmath>
+#include <numbers>
+#include <memory>
 
-#define _USE_MATH_DEFINES
-#include <math.h>
+auto SELECTED_DEVICENAME = "Focusrite USB ASIO";
+constexpr double TONE_FREQ = 200.0;
 
-struct MyAsioDevice {
+struct MyDeviceStruct {
     CASIO_Device handle;
     CASIO_DeviceProperties props;
     double currentSampleRate;
@@ -31,14 +32,14 @@ int CDECL asioCallback(CASIO_Event *event, CASIO_Device device, void *userData)
 
     case CASIO_EventType_BufferSwitch:
     {
-        auto asioDevice = (MyAsioDevice *)userData;
+        const auto asioDevice = static_cast<MyDeviceStruct *>(userData);
 
         if (asioDevice->props.sampleFormat == CASIO_SampleFormat_Int32) {
-            auto outs = (int **)event->bufferSwitchEvent.outputs;
+            const auto outs = reinterpret_cast<int **>(event->bufferSwitchEvent.outputs);
 
             for (int j = 0; j < asioDevice->props.bufferSampleLength; j++) {
-                float fsample = (float) sin(asioDevice->samplePos * M_PI * 2.0 / asioDevice->samplePeriod);
-                int isample = (int) (fsample * (1 << 30));
+                const auto fsample = std::sin(asioDevice->samplePos * std::numbers::pi * 2.0 / asioDevice->samplePeriod);
+                const auto isample = static_cast<int>(fsample * (1 << 30));
                 for (int i = 0; i < asioDevice->props.numOutputs; i++) {
                     outs[i][j] = isample;
                 }
@@ -68,16 +69,13 @@ int main()
     CASIO_DeviceInfo *infos;
     int deviceCount = 0;
     CASIO_EnumerateDevices(&infos, &deviceCount);
-    for (int i = 0; i < deviceCount; i++) {
-        printf("== device %d: [%s]\n", i, infos[i].name);
-    }
 
     // open all the devices and play some simple tones simultaneously
+    const auto devs = std::make_unique<MyDeviceStruct[]>(deviceCount);
 
-    auto devs = new MyAsioDevice[deviceCount];
-    
     float freq = 200.0;
     for (int i = 0; i < deviceCount; i++) {
+        printf("===========================================\n");
         if (CASIO_OpenDevice(infos[i].id, &devs[i], &devs[i].handle) != 0) {
             printf("failed to open device %d\n", i);
             return -1;
@@ -103,8 +101,6 @@ int main()
     for (int i = 0; i < deviceCount; i++) {
         CASIO_CloseDevice(devs[i].handle);
     }
-
-    delete devs;
 
     CASIO_Shutdown();
     return 0;

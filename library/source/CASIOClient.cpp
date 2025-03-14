@@ -2,18 +2,18 @@
 //
 
 #include "header.h"
-#include "../CASIOClient.h"
+#include "CASIOClient.h"
 
-#include "unicodestuff.h"
+#include "util/unicodestuff.h"
 
 #include <objbase.h> // COM stuff
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <vector>
 
-#include <assert.h>
+#include <cassert>
 
-#include "../../deps/ASIOSDK2.3/common/iasiodrv.h"
+#include "../sdk/ASIOSDK2.3/common/iasiodrv.h"
 
 //============ globals =======================================================
 
@@ -355,6 +355,17 @@ CASIOCLIENT_API int CDECL CASIO_Shutdown()
     return 0;
 }
 
+static bool testOpenDevice(CLSID clsid) {
+    IASIO *driver;
+    const GUID iid = clsid; // ASIO drivers just re-use their own CLSID as the IASIO interface IID. pretty sure that's wrong, but whatever ...
+    hr = CoCreateInstance(clsid, nullptr, CLSCTX_INPROC_SERVER, iid, reinterpret_cast<LPVOID *>(&driver));
+    if (SUCCEEDED(hr)) {
+        if (driver->init(nullptr) == ASIOTrue) {
+            return true;
+        }
+    }
+    return false;
+}
 
 CASIOCLIENT_API int CDECL CASIO_EnumerateDevices(CASIO_DeviceInfo **outInfo, int *outCount)
 {
@@ -381,11 +392,16 @@ CASIOCLIENT_API int CDECL CASIO_EnumerateDevices(CASIO_DeviceInfo **outInfo, int
                 RegGetValueW(asioKey, deviceKeyName, L"CLSID", RRF_RT_REG_SZ, NULL, valueStr, &valueLen);
                 CLSIDFromString(valueStr, &info.id->clsid);
 
+                // verify it's actually connected ...
+                if (!testOpenDevice(info.id->clsid)) {
+                    continue;
+                }
+
                 // description = name
                 valueLen = MAX_REGVALUE_LENGTH;
                 RegGetValueW(asioKey, deviceKeyName, L"Description", RRF_RT_REG_SZ, NULL, valueStr, &valueLen);
                 info.id->name = wstring_to_utf8(valueStr); // internal name is a std::string
-                                                           // "external" (visible to client) name is just a const char * from that std::string
+                // "external" (visible to client) name is just a const char * from that std::string
                 info.name = info.id->name.c_str();
 
                 retInfos.push_back(info);
@@ -424,7 +440,7 @@ CASIOCLIENT_API int CDECL CASIO_OpenDevice(CASIO_DeviceID id, void *userData, CA
         logFormatDev(ret, "opened successfully (global index %d)", ret->globalIndex);
 
         ret->driverVersion = driver->getDriverVersion();
-        logFormatDev(ret, "driver version: %d", ret->driverVersion);
+        logFormatDev(ret, "driver version: %08X", ret->driverVersion);
 
         if (driver->init(0) != ASIOTrue) { // pass 0 for sysref, since we don't use it (for that matter, why does ASIO want it?)
             driver->getErrorMessage(errorMessage);
