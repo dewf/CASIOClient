@@ -10,10 +10,21 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include <cassert>
 
 #include "../sdk/ASIOSDK2.3/common/iasiodrv.h"
+
+// annoying
+
+// Ensure 'min' and 'max' macros don't interfere
+#ifdef min
+    #undef min
+#endif
+#ifdef max
+    #undef max
+#endif
 
 //============ globals =======================================================
 
@@ -455,8 +466,8 @@ CASIOCLIENT_API int CDECL CASIO_OpenDevice(CASIO_DeviceID id, void *userData, CA
         logFormatDev(ret, "channels in/out: %d/%d", ret->numInputs, ret->numOutputs);
 
         // clamp channels
-        ret->numInputs = min(ret->numInputs, MAX_INPUT_CHANNELS);
-        ret->numOutputs = min(ret->numOutputs, MAX_OUTPUT_CHANNELS);
+        ret->numInputs = std::min(ret->numInputs, static_cast<long>(MAX_INPUT_CHANNELS));
+        ret->numOutputs = std::min(ret->numOutputs, static_cast<long>(MAX_OUTPUT_CHANNELS));
 
         // get buffer size
         driver->getBufferSize(&ret->buffer.minSize, &ret->buffer.maxSize, &ret->buffer.prefSize, &ret->buffer.granularity);
